@@ -81,4 +81,14 @@ class MedicoController extends Controller
 
         return redirect()->route('medicos.index')->with('success', 'Médico deletado com sucesso.');
     }
+
+    public function agendamentos()
+{
+    $medico = Medico::where('user_id', auth()->id())->first();
+    $agendamentos = Agendamento::where('medico_id', $medico->id)
+                            ->orderBy('data', 'asc')
+                            ->orderBy('hora', 'asc')
+                            ->get();
+    return view('medico.agendamentos', compact('agendamentos'));
+}
 }

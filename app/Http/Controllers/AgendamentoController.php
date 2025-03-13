@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agendamento;
+use App\Models\Paciente;
+use App\Models\Medico;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AgendamentoController extends Controller
 {
@@ -21,7 +24,8 @@ class AgendamentoController extends Controller
      */
     public function create()
     {
-        return view('agendamentos.create');
+        $medicos = Medico::all();
+        return view('agendamentos.create', compact('medicos'));
     }
 
     /**
@@ -31,15 +35,27 @@ class AgendamentoController extends Controller
     {
         $request->validate([
             'medico_id' => 'required|exists:medicos,id',
-            'paciente_id' => 'required|exists:pacientes,id',
-            'data' => 'required|date',
+            'data' => 'required|date|after_or_equal:today',
             'hora' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
         ]);
 
-        Agendamento::create($request->all());
+        $paciente = Paciente::where('user_id', auth()->id())->first();
+        
+        // Verificar se o paciente existe
+        if (!$paciente) {
+            return redirect()->back()->with('error', 'Perfil de paciente não encontrado.');
+        }
 
-        return redirect()->route('agendamentos.index')->with('success', 'Agendamento criado com sucesso.');
+        Agendamento::create([
+            'medico_id' => $request->medico_id,
+            'paciente_id' => $paciente->id,
+            'data' => $request->data,
+            'hora' => $request->hora,
+            'descricao' => $request->descricao,
+        ]);
+
+        return redirect()->route('agendamentos.meus')->with('success', 'Agendamento realizado com sucesso!');
     }
 
     /**
@@ -47,6 +63,9 @@ class AgendamentoController extends Controller
      */
     public function show(Agendamento $agendamento)
     {
+        // Verificar se o usuário tem permissão para ver este agendamento
+        $this->authorize('view', $agendamento);
+        
         return view('agendamentos.show', compact('agendamento'));
     }
 
@@ -55,7 +74,11 @@ class AgendamentoController extends Controller
      */
     public function edit(Agendamento $agendamento)
     {
-        return view('agendamentos.edit', compact('agendamento'));
+        // Verificar se o usuário tem permissão para editar este agendamento
+        $this->authorize('update', $agendamento);
+        
+        $medicos = Medico::all();
+        return view('agendamentos.edit', compact('agendamento', 'medicos'));
     }
 
     /**
@@ -63,17 +86,24 @@ class AgendamentoController extends Controller
      */
     public function update(Request $request, Agendamento $agendamento)
     {
+        // Verificar se o usuário tem permissão para atualizar este agendamento
+        $this->authorize('update', $agendamento);
+        
         $request->validate([
             'medico_id' => 'required|exists:medicos,id',
-            'paciente_id' => 'required|exists:pacientes,id',
-            'data' => 'required|date',
+            'data' => 'required|date|after_or_equal:today',
             'hora' => 'required|date_format:H:i',
             'descricao' => 'nullable|string',
         ]);
 
         $agendamento->update($request->all());
 
-        return redirect()->route('agendamentos.index')->with('success', 'Agendamento atualizado com sucesso.');
+        // Redirecionar para a rota apropriada dependendo do usuário
+        if (Auth::user()->patient) {
+            return redirect()->route('agendamentos.meus')->with('success', 'Agendamento atualizado com sucesso.');
+        } else {
+            return redirect()->route('medico.agendamentos')->with('success', 'Agendamento atualizado com sucesso.');
+        }
     }
 
     /**
@@ -81,8 +111,56 @@ class AgendamentoController extends Controller
      */
     public function destroy(Agendamento $agendamento)
     {
+        // Verificar se o usuário tem permissão para excluir este agendamento
+        $this->authorize('delete', $agendamento);
+        
         $agendamento->delete();
 
-        return redirect()->route('agendamentos.index')->with('success', 'Agendamento deletado com sucesso.');
+        // Redirecionar para a rota apropriada dependendo do usuário
+        if (Auth::user()->patient) {
+            return redirect()->route('agendamentos.meus')->with('success', 'Agendamento cancelado com sucesso.');
+        } else {
+            return redirect()->route('medico.agendamentos')->with('success', 'Agendamento cancelado com sucesso.');
+        }
+    }
+
+    /**
+     * Display the logged-in user's appointments (for patients).
+     */
+    public function meusAgendamentos()
+    {
+        $paciente = Paciente::where('user_id', auth()->id())->first();
+        
+        // Verificar se o paciente existe
+        if (!$paciente) {
+            return redirect()->route('dashboard')->with('error', 'Perfil de paciente não encontrado.');
+        }
+        
+        $agendamentos = Agendamento::where('paciente_id', $paciente->id)
+                                ->orderBy('data', 'asc')
+                                ->orderBy('hora', 'asc')
+                                ->get();
+                                
+        return view('agendamentos.meus', compact('agendamentos'));
+    }
+    
+    /**
+     * Display the logged-in doctor's appointments (for doctors).
+     */
+    public function agendamentosMedico()
+    {
+        $medico = Medico::where('user_id', auth()->id())->first();
+        
+        // Verificar se o médico existe
+        if (!$medico) {
+            return redirect()->route('dashboard')->with('error', 'Perfil de médico não encontrado.');
+        }
+        
+        $agendamentos = Agendamento::where('medico_id', $medico->id)
+                                ->orderBy('data', 'asc')
+                                ->orderBy('hora', 'asc')
+                                ->get();
+                                
+        return view('medico.agendamentos', compact('agendamentos'));
     }
 }

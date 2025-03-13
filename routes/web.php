@@ -6,11 +6,19 @@ use App\Http\Controllers\MedicoController;
 use App\Http\Controllers\PacienteController;
 use App\Http\Controllers\AgendamentoController;
 
-Route::resource('medicos', MedicoController::class);
-Route::resource('pacientes', PacienteController::class);
-Route::resource('agendamentos', AgendamentoController::class);
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::resource('medicos', MedicoController::class);
+    Route::resource('pacientes', PacienteController::class);
+    Route::resource('agendamentos', AgendamentoController::class)->except(['create', 'store']);
+
+    Route::get('/agendamentos/criar', [AgendamentoController::class, 'create'])->name('agendamentos.create');
+    Route::post('/agendamentos', [AgendamentoController::class, 'store'])->name('agendamentos.store');
+    Route::get('/meus-agendamentos', [AgendamentoController::class, 'meusAgendamentos'])->name('agendamentos.meus');
+    Route::get('/medico/agendamentos', [MedicoController::class, 'agendamentos'])->name('medico.agendamentos');
 });
 
 Route::get('/dashboard', function () {
