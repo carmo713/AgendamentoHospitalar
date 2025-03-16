@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Paciente;
 
 class Agendamento extends Model
 {
-    protected $table = 'agendamentos';
+    use HasFactory;
 
     protected $fillable = [
         'medico_id',

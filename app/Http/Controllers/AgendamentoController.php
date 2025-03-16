@@ -63,8 +63,8 @@ class AgendamentoController extends Controller
      */
     public function show(Agendamento $agendamento)
     {
-        // Verificar se o usuário tem permissão para ver este agendamento
-        $this->authorize('view', $agendamento);
+        // Verificar se o usuário é o dono do agendamento ou o médico associado
+        $this->verificarPermissao($agendamento);
         
         return view('agendamentos.show', compact('agendamento'));
     }
@@ -74,8 +74,8 @@ class AgendamentoController extends Controller
      */
     public function edit(Agendamento $agendamento)
     {
-        // Verificar se o usuário tem permissão para editar este agendamento
-        $this->authorize('update', $agendamento);
+        // Verificar se o usuário é o dono do agendamento
+        $this->verificarPermissao($agendamento);
         
         $medicos = Medico::all();
         return view('agendamentos.edit', compact('agendamento', 'medicos'));
@@ -86,8 +86,8 @@ class AgendamentoController extends Controller
      */
     public function update(Request $request, Agendamento $agendamento)
     {
-        // Verificar se o usuário tem permissão para atualizar este agendamento
-        $this->authorize('update', $agendamento);
+        // Verificar se o usuário é o dono do agendamento
+        $this->verificarPermissao($agendamento);
         
         $request->validate([
             'medico_id' => 'required|exists:medicos,id',
@@ -99,7 +99,8 @@ class AgendamentoController extends Controller
         $agendamento->update($request->all());
 
         // Redirecionar para a rota apropriada dependendo do usuário
-        if (Auth::user()->patient) {
+        $paciente = Auth::user()->patient()->first();
+        if ($paciente) {
             return redirect()->route('agendamentos.meus')->with('success', 'Agendamento atualizado com sucesso.');
         } else {
             return redirect()->route('medico.agendamentos')->with('success', 'Agendamento atualizado com sucesso.');
@@ -111,13 +112,14 @@ class AgendamentoController extends Controller
      */
     public function destroy(Agendamento $agendamento)
     {
-        // Verificar se o usuário tem permissão para excluir este agendamento
-        $this->authorize('delete', $agendamento);
+        // Verificar se o usuário é o dono do agendamento
+        $this->verificarPermissao($agendamento);
         
         $agendamento->delete();
 
         // Redirecionar para a rota apropriada dependendo do usuário
-        if (Auth::user()->patient) {
+        $paciente = Auth::user()->patient()->first();
+        if ($paciente) {
             return redirect()->route('agendamentos.meus')->with('success', 'Agendamento cancelado com sucesso.');
         } else {
             return redirect()->route('medico.agendamentos')->with('success', 'Agendamento cancelado com sucesso.');
@@ -162,5 +164,22 @@ class AgendamentoController extends Controller
                                 ->get();
                                 
         return view('medico.agendamentos', compact('agendamentos'));
+    }
+
+    /**
+     * Verifica se o usuário tem permissão para acessar o agendamento.
+     */
+    private function verificarPermissao(Agendamento $agendamento)
+    {
+        $user = Auth::user();
+        $paciente = $user->patient()->first();
+        $medico = $user->doctor()->first();
+        
+        $isPacienteDoAgendamento = $paciente && $agendamento->paciente_id == $paciente->id;
+        $isMedicoDoAgendamento = $medico && $agendamento->medico_id == $medico->id;
+        
+        if (!$isPacienteDoAgendamento && !$isMedicoDoAgendamento) {
+            abort(403, 'Você não tem permissão para acessar este agendamento.');
+        }
     }
 }
