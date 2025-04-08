@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Agendamento;
 use App\Models\Paciente;
 use App\Models\Medico;
+use App\Models\Especialidade;
+use App\Models\Unidade;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Horario;
 
 class AgendamentoController extends Controller
 {
@@ -24,8 +27,34 @@ class AgendamentoController extends Controller
      */
     public function create()
     {
-        $medicos = Medico::all();
-        return view('agendamentos.create', compact('medicos'));
+        $medicos = Medico::with('user')->get();
+    
+        // Adicione estas linhas para disponibilizar as variáveis necessárias
+        $especialidades = Especialidade::all();
+        $unidades = Unidade::all();
+        
+        // Construir a query para horários disponíveis
+        $horariosQuery = Horario::where('disponivel', true)
+                               ->where('inicio', '>', now())
+                               ->with(['medico', 'medico.user', 'medico.especialidade', 'medico.unidade']);
+        
+        // Aplicar filtros se fornecidos
+        if (request()->has('especialidade_id') && request('especialidade_id') !== '') {
+            $horariosQuery->whereHas('medico', function($q) {
+                $q->where('especialidade_id', request('especialidade_id'));
+            });
+        }
+        
+        if (request()->has('unidade_id') && request('unidade_id') !== '') {
+            $horariosQuery->whereHas('medico', function($q) {
+                $q->where('unidade_id', request('unidade_id'));
+            });
+        }
+        
+        // Ordenar por data/hora
+        $horarios = $horariosQuery->orderBy('inicio')->get();
+        
+        return view('agendamentos.create', compact('medicos', 'especialidades', 'unidades', 'horarios'));
     }
 
     /**

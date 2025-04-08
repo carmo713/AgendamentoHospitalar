@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Medico;
 use App\Models\Paciente;
+use App\Models\Especialidade;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,9 +52,17 @@ class RegisteredUserController extends Controller
         ]);
 
         if ($request->role === 'medico') {
+                $especialidade = Especialidade::where('nome', $request->especialidade)->first();
+            
+            if (!$especialidade) {
+                $especialidade = Especialidade::create([
+                    'nome' => $request->especialidade
+                ]);
+            }
+            
             Medico::create([
                 'user_id' => $user->id,
-                'especialidade' => $request->especialidade,
+                'especialidade_id' => $especialidade->id, // Modificado: agora usando o ID da especialidade
                 'email' => $request->email,
                 'crm' => $request->crm,
             ]);

@@ -14,7 +14,11 @@ class Medico extends Model
     protected $table = 'medicos';
 
     // Campos que podem ser atribuídos em massa
-    protected $fillable = ['user_id', 'especialidade','crm', 'email'];
+    protected $fillable = ['user_id', 
+    'especialidade_id', // Modificado
+    'email', 
+    'crm',
+    'unidade_id' ];
 
     // Relacionamento com o modelo User
     public function user()
@@ -27,4 +31,8 @@ class Medico extends Model
     {
         return $this->hasMany(Paciente::class);
     }
+    public function especialidade()
+{
+    return $this->belongsTo(Especialidade::class);
+}
 }
