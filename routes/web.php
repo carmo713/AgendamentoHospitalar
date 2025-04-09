@@ -38,4 +38,23 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/horarios', [HorarioController::class, 'index'])->name('horarios.index');
 
+
+// Rotas para médicos
+Route::middleware(['auth', 'medico'])->prefix('medico')->group(function () {
+    Route::get('/', [MedicoController::class, 'index'])->name('medico.index');
+    Route::get('/disponibilidade', [MedicoController::class, 'disponibilidade'])->name('medico.disponibilidade');
+    Route::post('/disponibilidade', [MedicoController::class, 'storeDisponibilidade'])->name('medico.disponibilidade.store');
+    Route::delete('/disponibilidade/{horario}', [MedicoController::class, 'destroyDisponibilidade'])->name('medico.disponibilidade.destroy');
+    Route::get('/agendamentos', [MedicoController::class, 'agendamentos'])->name('medico.agendamentos');
+    Route::get('/perfil/edit', [MedicoController::class, 'editPerfil'])->name('medico.perfil.edit');
+    Route::put('/perfil', [MedicoController::class, 'updatePerfil'])->name('medico.perfil.update');
+});
+
+// API Routes
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    Route::get('/medico/horarios', [MedicoController::class, 'getHorarios'])->name('api.medico.horarios');
+    Route::get('/medico/agendamentos', [MedicoController::class, 'getAgendamentos'])->name('api.medico.agendamentos');
+    Route::get('/horarios-disponiveis', [AgendamentoController::class, 'getHorariosDisponiveis'])->name('api.horarios-disponiveis');
+});
+
 require __DIR__.'/auth.php';
