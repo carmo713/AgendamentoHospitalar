@@ -71,129 +71,45 @@
                 </div>
             </div>
             
-            <!-- Horários Disponíveis -->
+            <!-- Calendário -->
             <div class="mt-6 bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <h3 class="font-semibold text-lg text-gray-800 mb-4">Horários Disponíveis</h3>
-                    
-                    <!-- Filtros para horários -->
-                    <div class="mb-4">
-                        <form action="{{ route('agendamentos.create') }}" method="GET" class="flex flex-wrap gap-3">
-                            <div>
-                                <x-input-label for="filter_especialidade" :value="__('Especialidade')" />
-                                <select name="especialidade_id" id="filter_especialidade" class="mt-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                    <option value="">Todas</option>
-                                    @foreach($especialidades as $especialidade)
-                                        <option value="{{ $especialidade->id }}" {{ request('especialidade_id') == $especialidade->id ? 'selected' : '' }}>
-                                            {{ $especialidade->nome }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <x-input-label for="filter_unidade" :value="__('Unidade')" />
-                                <select name="unidade_id" id="filter_unidade" class="mt-1 border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                                    <option value="">Todas</option>
-                                    @foreach($unidades as $unidade)
-                                        <option value="{{ $unidade->id }}" {{ request('unidade_id') == $unidade->id ? 'selected' : '' }}>
-                                            {{ $unidade->nome }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            
-                            <div class="self-end">
-                                <x-primary-button type="submit" class="h-10">
-                                    {{ __('Filtrar') }}
-                                </x-primary-button>
-                            </div>
-                        </form>
-                    </div>
-                    
-                    <!-- Tabela de horários -->
-                    <div class="mt-4 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data/Hora</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Médico</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Especialidade</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unidade</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @forelse($horarios as $horario)
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ \Carbon\Carbon::parse($horario->inicio)->format('d/m/Y H:i') }} - 
-                                        {{ \Carbon\Carbon::parse($horario->fim)->format('H:i') }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        Dr(a). {{ $horario->medico->user->name }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $horario->medico->especialidade->nome }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ $horario->medico->unidade->nome ?? 'Não definida' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <button type="button" 
-                                                onclick="selecionarHorario('{{ $horario->medico->id }}', '{{ \Carbon\Carbon::parse($horario->inicio)->format('Y-m-d') }}', '{{ \Carbon\Carbon::parse($horario->inicio)->format('H:i') }}')" 
-                                                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                            Selecionar
-                                        </button>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                                        Nenhum horário disponível para os filtros selecionados.
-                                    </td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Paginação -->
-                    @if(method_exists($horarios, 'hasPages') && $horarios->hasPages())
-                    <div class="mt-4">
-                        {{ $horarios->appends(request()->query())->links() }}
-                    </div>
-                @endif
+                    <h3 class="font-semibold text-lg text-gray-800 mb-4">Calendário de Disponibilidade</h3>
+                    <div id="calendar"></div>
                 </div>
             </div>
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js"></script>
     <script>
-        function selecionarHorario(medicoId, data, hora) {
-            document.getElementById('medico_id').value = medicoId;
-            document.getElementById('data').value = data;
-            document.getElementById('hora').value = hora;
-            
-            // Scroll até o formulário
-            document.querySelector('#agendamento-form').scrollIntoView({ behavior: 'smooth' });
-        }
-        
-        // Validação da data
         document.addEventListener('DOMContentLoaded', function() {
-            const dataInput = document.getElementById('data');
-            const horaInput = document.getElementById('hora');
-            
-            dataInput.addEventListener('change', function() {
-                const selectedDate = new Date(this.value);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                if (selectedDate < today) {
-                    alert('Não é possível agendar consultas para datas passadas.');
-                    this.value = '';
+            const calendarEl = document.getElementById('calendar');
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '{{ route("api.horarios-disponiveis") }}', // Rota para buscar horários disponíveis
+                eventClick: function(info) {
+                    // Preencher os campos do formulário ao clicar em um evento
+                    const medicoId = info.event.extendedProps.medico_id;
+                    const data = info.event.startStr.split('T')[0];
+                    const hora = info.event.startStr.split('T')[1].substr(0, 5);
+
+                    document.getElementById('medico_id').value = medicoId;
+                    document.getElementById('data').value = data;
+                    document.getElementById('hora').value = hora;
+
+                    // Scroll até o formulário
+                    document.querySelector('#agendamento-form').scrollIntoView({ behavior: 'smooth' });
                 }
             });
+            calendar.render();
         });
     </script>
 </x-app-layout>

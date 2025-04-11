@@ -176,4 +176,6 @@ class MedicoController extends Controller
         
         return redirect()->route('medico.index')->with('success', 'Perfil atualizado com sucesso!');
     }
+
+    
 }

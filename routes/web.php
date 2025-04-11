@@ -40,7 +40,7 @@ Route::get('/horarios', [HorarioController::class, 'index'])->name('horarios.ind
 
 
 // Rotas para médicos
-Route::middleware(['auth', 'medico'])->prefix('medico')->group(function () {
+Route::middleware(['auth'])->prefix('medico')->group(function () {
     Route::get('/', [MedicoController::class, 'index'])->name('medico.index');
     Route::get('/disponibilidade', [MedicoController::class, 'disponibilidade'])->name('medico.disponibilidade');
     Route::post('/disponibilidade', [MedicoController::class, 'storeDisponibilidade'])->name('medico.disponibilidade.store');
